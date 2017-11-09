@@ -1,42 +1,41 @@
 package com.raffa.brmsscheduler;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import javax.inject.Inject;
+
 import org.springframework.beans.factory.annotation.Value;
 
-import io.fabric8.kubernetes.api.model.DoneablePod;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
+import com.google.gson.reflect.TypeToken;
+
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientException;
-import io.fabric8.kubernetes.client.Watch;
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
-import io.fabric8.kubernetes.client.dsl.PodResource;
+import io.kubernetes.client.ApiClient;
+import io.kubernetes.client.ApiException;
+import io.kubernetes.client.apis.CoreV1Api;
+import io.kubernetes.client.models.V1Pod;
+import io.kubernetes.client.util.Watch;
 
 public class PodWatcher {
-	@Autowired
-	KubernetesClient client;
-	
+	@Inject
+	ApiClient client;
+
+	@Inject
+	CoreV1Api v1Api;
+
 	@Value("${scheduler-name:BMRSScheduler}")
 	String schedulerName;
-	
-	public PodWatcher() {
-		Watch watch=client.pods().withField("schduler", schedulerName).watch(new Watcher<Pod>() {
-	        @Override
-	        public void eventReceived(Action action, Pod pod) {
-	          //TODO use brms to select node
-	          String node;
-	          //create v1Binding between pod and node: https://kubernetes.io/docs/api-reference/v1.8/#binding-v1-core
-	        }
 
-	        @Override
-	        public void onClose(KubernetesClientException e) {
-	          if (e != null) {
-	            //TODO manage error
-	          }
-	        }
-	      });
+	public PodWatcher() throws ApiException {
+		Watch<V1Pod> watch = Watch.createWatch(client,
+				v1Api.listPodForAllNamespacesCall(null, "schedulerName="+schedulerName, Boolean.TRUE, null, null, null, null, null, Boolean.TRUE, null, null),
+				new TypeToken<Watch.Response<V1Pod>>(){}.getType());
+		
+/*		v1Api.createNamespacedBinding(namespace, body, pretty)
 	
+       for (Watch.Response<V1Pod> item : watch) {
+            System.out.printf("%s : %s%n", item.type, item.object.getMetadata().getName());
+            //TODO use brms to identify node
+            String node;
+            client.buildCall(path, method, queryParams, collectionQueryParams, body, headerParams, formParams, authNames, progressRequestListener)
+        }*/
 	
 	}
 

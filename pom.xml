@@ -63,20 +63,25 @@
 		</dependency>
 
 
-		<!-- https://mvnrepository.com/artifact/javax.annotation/jsr250-api -->
+		<!-- https://mvnrepository.com/artifact/javax.inject/javax.inject -->
 		<dependency>
-			<groupId>javax.annotation</groupId>
-			<artifactId>jsr250-api</artifactId>
-			<version>1.0</version>
+			<groupId>javax.inject</groupId>
+			<artifactId>javax.inject</artifactId>
+			<version>1</version>
 		</dependency>
 
+		<!-- https://mvnrepository.com/artifact/io.kubernetes/client-java -->
+		<dependency>
+			<groupId>io.kubernetes</groupId>
+			<artifactId>client-java</artifactId>
+			<version>1.0.0-beta1</version>
+		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/io.fabric8/kubernetes-client -->
-		<!-- <dependency> -->
-		<!-- <groupId>io.fabric8</groupId> -->
-		<!-- <artifactId>kubernetes-client</artifactId> -->
-		<!-- <version>3.0.3</version> -->
-		<!-- </dependency> -->
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-validator</artifactId>
+			<version>5.2.4.Final</version>
+		</dependency>
 
 
 	</dependencies>
