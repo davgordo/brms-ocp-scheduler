@@ -16,8 +16,5 @@ public class BrmsOcpSchedulerApplication {
 		SpringApplication.run(BrmsOcpSchedulerApplication.class, args);
 	}
 	
-	@Bean
-	public PodWatcherFabric8 pwf8() {
-		return new PodWatcherFabric8();
-	}
+
 }

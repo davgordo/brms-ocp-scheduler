@@ -44,7 +44,6 @@ public class BRMSConfig {
 	}
 	
 	@Bean
-	@Scope(value="session")
 	public KieSession ksession (RuntimeEngine BRMSengine) {
 		return BRMSengine.getKieSession();
 	}
