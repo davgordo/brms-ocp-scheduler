@@ -1,5 +1,6 @@
 package com.raffa.brmsscheduler;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 import org.apache.commons.logging.Log;
@@ -39,29 +40,32 @@ public class PodWatcherFabric8 {
 	@Inject
 	KubernetesClient kclient;
 
-	@Value("${scheduler.name : BMRSScheduler}")
+	@Value("${scheduler.name:BRMSScheduler}")
 	String schedulerName;
 	
 	@Inject
 	KieSession ksession;
-
-	public PodWatcherFabric8() {
+	
+	@PostConstruct
+	public void runWatcher() {
 		KubernetesClient client=new DefaultKubernetesClient();
 		MixedOperation<Pod, PodList, DoneablePod, PodResource<Pod,DoneablePod>>pods=client.pods();
 		log.debug("scheduler name: "+schedulerName);
 		Watch watch = pods.
-				//withField("spec.schedulerName", "myscheduler").
 				withField("status.phase", "Pending")
 				.watch(new Watcher<Pod>() {
 					@Override
 					public void eventReceived(Action action, Pod pod) {
-						log.debug("received request for pod: "+pod.getMetadata().getNamespace()+"/"+pod.getMetadata().getName()+" with schduler: "+pod.getSpec().getSchedulerName());
-						if (pod.getSpec().getSchedulerName()!=schedulerName)
+						log.debug("received request for pod: "+pod.getMetadata().getNamespace()+"/"+pod.getMetadata().getName()+" with scheduler: "+pod.getSpec().getSchedulerName());
+						if (!pod.getSpec().getSchedulerName().equals(schedulerName)) {
+							log.debug("not my scheduler, exiting");
 							return;
+						}
+						log.debug("starting pod scheduling brms process for pod: "+pod.getMetadata().getNamespace()+"/"+pod.getMetadata().getName());
 						// TODO use brms to select node
 						ProcessInstance instance=ksession.startProcess("com.sample.bpmn.hello");
 						// ?? not sure what do do here
-						String nodeName = null;
+						String nodeName = "app-node-1.env1.casl.raffa.com";
 						// create v1Binding between pod and node:
 						// https://kubernetes.io/docs/api-reference/v1.8/#binding-v1-core
 
@@ -69,6 +73,8 @@ public class PodWatcherFabric8 {
 							createBinding(pod, nodeName);
 						} catch (ApiException e) {
 							// TODO Auto-generated catch block
+							log.debug(e.getResponseHeaders());
+							log.debug(e.getResponseBody());
 							e.printStackTrace();
 						}
 					}
@@ -80,12 +86,12 @@ public class PodWatcherFabric8 {
 						}
 					}
 				});
-
 	}
+	
 
 	private void createBinding(Pod pod, String nodeName) throws ApiException {
 		V1ObjectReference or = new V1ObjectReference();
-		or.setKind("node");
+		or.setKind("Node");
 		or.setName(nodeName);
 		V1ObjectMeta meta = new V1ObjectMeta();
 		meta.setName(pod.getMetadata().getName());
