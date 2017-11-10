@@ -91,6 +91,20 @@
       <artifactId>spring-boot-starter-jta-narayana</artifactId>
     </dependency>
 
+		<!-- https://mvnrepository.com/artifact/javax.el/el-api -->
+		<dependency>
+		    <groupId>javax.el</groupId>
+		    <artifactId>el-api</artifactId>
+		    <version>2.2</version>
+		</dependency>
+    
+		<!-- https://mvnrepository.com/artifact/io.fabric8/kubernetes-client -->
+		<dependency>
+		    <groupId>io.fabric8</groupId>
+		    <artifactId>kubernetes-client</artifactId>
+		    <version>3.0.3</version>
+		</dependency>
+
 
 	</dependencies>
 

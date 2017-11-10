@@ -2,6 +2,8 @@ package com.raffa.brmsscheduler;
 
 import javax.inject.Inject;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.process.ProcessInstance;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,7 +12,6 @@ import org.springframework.stereotype.Component;
 import io.fabric8.kubernetes.api.model.DoneablePod;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
-import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -27,6 +28,8 @@ import io.kubernetes.client.models.V1ObjectReference;
 
 @Component
 public class PodWatcherFabric8 {
+	
+	private Log log = LogFactory.getLog(PodWatcherFabric8.class);
 
 	@Inject
 	CoreV1Api v1Api;
@@ -36,7 +39,7 @@ public class PodWatcherFabric8 {
 	@Inject
 	KubernetesClient kclient;
 
-	@Value("${schedulerName:BMRSScheduler}")
+	@Value("${scheduler.name : BMRSScheduler}")
 	String schedulerName;
 	
 	@Inject
@@ -45,12 +48,16 @@ public class PodWatcherFabric8 {
 	public PodWatcherFabric8() {
 		KubernetesClient client=new DefaultKubernetesClient();
 		MixedOperation<Pod, PodList, DoneablePod, PodResource<Pod,DoneablePod>>pods=client.pods();
+		log.debug("scheduler name: "+schedulerName);
 		Watch watch = pods.
-				//withField("spec.scheduler", schedulerName).
+				//withField("spec.schedulerName", "myscheduler").
 				withField("status.phase", "Pending")
 				.watch(new Watcher<Pod>() {
 					@Override
 					public void eventReceived(Action action, Pod pod) {
+						log.debug("received request for pod: "+pod.getMetadata().getNamespace()+"/"+pod.getMetadata().getName()+" with schduler: "+pod.getSpec().getSchedulerName());
+						if (pod.getSpec().getSchedulerName()!=schedulerName)
+							return;
 						// TODO use brms to select node
 						ProcessInstance instance=ksession.startProcess("com.sample.bpmn.hello");
 						// ?? not sure what do do here
