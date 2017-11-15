@@ -3,16 +3,13 @@ package com.raffa.brmsscheduler;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
+import io.fabric8.kubernetes.api.model.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.kie.api.runtime.KieSession;
-import org.kie.api.runtime.process.ProcessInstance;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import io.fabric8.kubernetes.api.model.DoneablePod;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -29,12 +26,11 @@ import io.kubernetes.client.models.V1ObjectReference;
 
 @Component
 public class PodWatcherFabric8 {
-	
+
 	private Log log = LogFactory.getLog(PodWatcherFabric8.class);
 
 	@Inject
 	CoreV1Api v1Api;
-	
 
 
 	@Inject
@@ -42,33 +38,47 @@ public class PodWatcherFabric8 {
 
 	@Value("${scheduler.name:BRMSScheduler}")
 	String schedulerName;
-	
+
 	@Inject
 	KieSession ksession;
-	
+
 	@PostConstruct
 	public void runWatcher() {
-		KubernetesClient client=new DefaultKubernetesClient();
-		MixedOperation<Pod, PodList, DoneablePod, PodResource<Pod,DoneablePod>>pods=client.pods();
-		log.debug("scheduler name: "+schedulerName);
+		KubernetesClient client = new DefaultKubernetesClient();
+		MixedOperation<Pod, PodList, DoneablePod, PodResource<Pod, DoneablePod>> pods = client.pods();
+		log.debug("scheduler name: " + schedulerName);
 		Watch watch = pods.
 				withField("status.phase", "Pending")
 				.watch(new Watcher<Pod>() {
 					@Override
 					public void eventReceived(Action action, Pod pod) {
-						log.debug("received request for pod: "+pod.getMetadata().getNamespace()+"/"+pod.getMetadata().getName()+" with scheduler: "+pod.getSpec().getSchedulerName());
+
+						log.debug("received request for pod: " + pod.getMetadata().getNamespace() + "/" + pod.getMetadata().getName() + " with scheduler: " + pod.getSpec().getSchedulerName());
 						if (!pod.getSpec().getSchedulerName().equals(schedulerName)) {
 							log.debug("not my scheduler, exiting");
 							return;
 						}
-						log.debug("starting pod scheduling brms process for pod: "+pod.getMetadata().getNamespace()+"/"+pod.getMetadata().getName());
-						// TODO use brms to select node
-						ProcessInstance instance=ksession.startProcess("com.sample.bpmn.hello");
-						// ?? not sure what do do here
-						String nodeName = "app-node-1.env1.casl.raffa.com";
+
+						log.debug("starting pod scheduling brms process for pod: " + pod.getMetadata().getNamespace() + "/" + pod.getMetadata().getName());
+						NodeList nodes = (NodeList) kclient.nodes();
+						Schedule schedule = new Schedule();
+
+						try {
+							ksession.insert(schedule);
+							ksession.insert(pod);
+							for (Node node : nodes.getItems()) {
+								ksession.insert(node);
+							}
+							ksession.fireAllRules();
+						} catch (Throwable t) {
+							t.printStackTrace();
+						} finally {
+							ksession.dispose();
+						}
+
+						String nodeName = schedule.getNodeName();
 						// create v1Binding between pod and node:
 						// https://kubernetes.io/docs/api-reference/v1.8/#binding-v1-core
-
 						try {
 							createBinding(pod, nodeName);
 						} catch (ApiException e) {
@@ -87,7 +97,7 @@ public class PodWatcherFabric8 {
 					}
 				});
 	}
-	
+
 
 	private void createBinding(Pod pod, String nodeName) throws ApiException {
 		V1ObjectReference or = new V1ObjectReference();

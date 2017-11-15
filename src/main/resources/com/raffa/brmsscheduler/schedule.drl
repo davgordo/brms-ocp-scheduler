@@ -1,0 +1,20 @@
+package com.raffa.brmsscheduler;
+
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.Node;
+
+rule "elimate nodes that are not ready"
+	when
+		node : Node( )
+		eval( node.getStatus().getPhase() != "Ready" )
+	then
+		delete( node )
+end
+
+rule "schedule to a remaining node"
+	when
+		node : Node( )
+		schedule: Schedule( )
+	then
+		modify( schedule ) { setNodeName(node.getMetadata().getName()) }
+end
